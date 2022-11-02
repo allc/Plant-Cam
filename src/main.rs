@@ -1,7 +1,8 @@
-use log::{info, warn};
+use log::{info, warn, error};
 use serde::{Serialize, Deserialize};
 use nokhwa::{Camera, CameraInfo, CameraFormat, Resolution, FrameFormat};
 use std::path::{PathBuf};
+use std::fs;
 use image::ImageFormat;
 use image::imageops::crop_imm;
 use chrono::{Local};
@@ -22,6 +23,9 @@ fn main() {
     let image = crop_imm(&frame, config.crop_x, config.crop_y, config.crop_width, config.crop_height).to_image();
 
     let output_path = get_output_path(&config);
+    if let Some(parent) = output_path.parent() {
+        fs::create_dir_all(parent).expect(&format!("Could not create directory {:?}", parent));
+    }
     image.save_with_format(output_path, ImageFormat::Jpeg).expect("Failed to save image.");
 }
 
@@ -37,6 +41,7 @@ struct Config {
     crop_y: u32,
     crop_width: u32,
     crop_height: u32,
+    no_default_camera: bool,
 }
 
 impl Default for Config {
@@ -52,6 +57,7 @@ impl Default for Config {
             crop_y: 0,
             crop_width: 640,
             crop_height: 480,
+            no_default_camera: true,
         }
     }
 }
@@ -74,6 +80,10 @@ fn get_camera_index(config: &Config, cameras: &Vec<CameraInfo>) -> usize {
             info!("Using camera {} {}.", camera.index(), camera.human_name());
             return camera.index();
         }
+    }
+    if config.no_default_camera {
+        error!("Could not find camera with id {}, exiting...", &config.camera_id);
+        panic!("Could not find camera with id {}", &config.camera_id);
     }
     warn!("Could not find camera with id {}, using camera with index 0.", &config.camera_id);
     0

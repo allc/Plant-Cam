@@ -8,3 +8,4 @@ crop_x = 420
 crop_y = 0
 crop_width = 1080
 crop_height = 1080
+no_default_camera = true
