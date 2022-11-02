@@ -1,0 +1,10 @@
+camera_id = "VID_046D&PID_0891&MI_00"
+camera_width = 1920
+camera_height = 1080
+camera_frame_rate = 30
+output_dir = "output"
+output_prefix = ""
+crop_x = 420
+crop_y = 0
+crop_width = 1080
+crop_height = 1080
