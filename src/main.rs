@@ -51,7 +51,7 @@ impl Default for Config {
             camera_width: 640,
             camera_height: 480,
             camera_frame_rate: 30,
-            output_dir: "output".to_string(),
+            output_dir: "pictures".to_string(),
             output_prefix: "".to_string(),
             crop_x: 0,
             crop_y: 0,
