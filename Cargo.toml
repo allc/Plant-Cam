@@ -12,6 +12,9 @@ confy = "0.5.1"
 serde = { version = "1.0", features = ["derive"] }
 image = "0.23"
 chrono = "0.4"
+rust-s3 = "0.32.3"
+aws-creds = "0.30.0"
+tokio = { version = "1.21.2", features = ["full"] }
 
 [dependencies.nokhwa]
 version = "0.9.2"

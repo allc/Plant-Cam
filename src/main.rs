@@ -3,12 +3,18 @@ use serde::{Serialize, Deserialize};
 use nokhwa::{Camera, CameraInfo, CameraFormat, Resolution, FrameFormat};
 use std::path::{PathBuf};
 use std::fs;
+use std::fs::File;
+use std::io::prelude::*;
 use image::ImageFormat;
 use image::imageops::crop_imm;
 use chrono::{Local};
+use s3::Region;
+use s3::bucket::Bucket;
+use awscreds::Credentials;
 
-fn main() {
-    simple_logger::init().unwrap();
+#[tokio::main]
+async fn main() {
+    simple_logger::init_with_level(log::Level::Info).unwrap();
     let config = get_config();
 
     let cameras = get_cameras();
@@ -26,7 +32,18 @@ fn main() {
     if let Some(parent) = output_path.parent() {
         fs::create_dir_all(parent).expect(&format!("Could not create directory {:?}", parent));
     }
-    image.save_with_format(output_path, ImageFormat::Jpeg).expect("Failed to save image.");
+    image.save_with_format(&output_path, ImageFormat::Jpeg).expect("Failed to save picture");
+
+    info!("Updating image.");
+    let mut image_file = File::open(&output_path).expect("Failed to open file for upload");
+    let mut image_file_buffer = Vec::new();
+    image_file.read_to_end(&mut image_file_buffer).expect("Failed to read file for upload");
+    let bucket = get_bucket(&config);
+    bucket.put_object_with_content_type(
+        format!("{}pictures/{}", config.r2_project_prefix, output_path.file_name().unwrap().to_str().unwrap()),
+        &image_file_buffer,
+        "image/jpeg",
+    ).await.expect("Failed to upload picture");
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -42,6 +59,11 @@ struct Config {
     crop_width: u32,
     crop_height: u32,
     no_default_camera: bool,
+    r2_accound_id: String,
+    r2_bucket_name: String,
+    r2_access_key_id: String,
+    r2_secret_access_key: String,
+    r2_project_prefix: String,
 }
 
 impl Default for Config {
@@ -58,6 +80,11 @@ impl Default for Config {
             crop_width: 640,
             crop_height: 480,
             no_default_camera: true,
+            r2_accound_id: "".to_string(),
+            r2_bucket_name: "".to_string(),
+            r2_access_key_id: "".to_string(),
+            r2_secret_access_key: "".to_string(),
+            r2_project_prefix: "plant-cam/".to_string(),
         }
     }
 }
@@ -107,4 +134,16 @@ fn get_output_path(config: &Config) -> PathBuf {
     path.push(filename);
     info!("Saving image to {:?}.", path);
     path
+}
+
+fn get_bucket(config: &Config) -> Bucket {
+    Bucket::new(
+        &config.r2_bucket_name,
+        Region::R2 { account_id: config.r2_accound_id.to_owned() },
+        Credentials::new(
+            Some(&config.r2_access_key_id),
+            Some(&config.r2_secret_access_key),
+            None, None, None,
+        ).expect("Could not initialise S3 credential"),
+    ).expect("Could not instantiate the existing bucket")
 }
